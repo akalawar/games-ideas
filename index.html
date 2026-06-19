@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Math Quest: Area & Volume</title>
+    <style>
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        .header-ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+        .stats {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            background: #ffffff;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        input[type="number"] {
+            padding: 12px;
+            font-size: 18px;
+            width: 120px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            text-align: center;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #219653;
+        }
+        #feedback {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .completion { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="header-ui">
+        <div class="stats" id="level-display">Level: 1/10</div>
+        <div style="font-size: 22px; font-weight: bold;">📐 Math Quest</div>
+        <div class="stats" id="score-display">Score: 0</div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gameCanvas" width="760" height="380"></canvas>
+    </div>
+
+    <div class="controls" id="control-box">
+        <input type="number" id="answer-input" placeholder="Your answer" step="any" autocomplete="off">
+        <button id="submit-btn" onclick="checkAnswer()">Submit Answer</button>
+        <button id="next-btn" onclick="nextLevel()" style="display:none; background-color: #2980b9;">Next Level</button>
+    </div>
+
+    <div id="feedback"></div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let currentLevel = 0;
+    let score = 0;
+    let gameActive = true;
+
+    // 10 Levels defining different math scenarios (Area and Volume)
+    const levels = [
+        {
+            title: "Level 1: The New Rug (Area)",
+            scenario: "Help Emma calculate the area of her rectangular bedroom rug so she knows if it fits.",
+            question: "What is the area of a rectangle with length = 8m and width = 5m? (in m²)",
+            answer: 40,
+            draw: (ctx) => {
+                drawRect(280, 110, 200, 130, "#e67e22");
+                drawDimension(280, 90, 480, 90, "8 m");
+                drawDimension(260, 110, 260, 240, "5 m");
+            }
+        },
+        {
+            title: "Level 2: Fencing the Garden (Area)",
+            scenario: "Farmer Ben needs to find the square footage of his square vegetable patch.",
+            question: "What is the area of a square garden with side lengths of 7m? (in m²)",
+            answer: 49,
+            draw: (ctx) => {
+                drawRect(300, 110, 140, 140, "#2ecc71");
+                drawDimension(300, 90, 440, 90, "7 m");
+                drawDimension(280, 110, 280, 250, "7 m");
+            }
+        },
+        {
+            title: "Level 3: The Pizza Box (Area)",
+            scenario: "The local pizzeria needs to know the surface area of the base of their medium pizza.",
+            question: "Find the area of a circle with a radius of 4cm. (Use π = 3.14, round to 2 decimal places)",
+            answer: 50.24,
+            draw: (ctx) => {
+                let cx = 380, cy = 180, r = 70;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.fillStyle = "#f1c40f";
+                ctx.fill();
+                ctx.strokeStyle = "#d35400";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                // Radius line
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + r, cy);
+                ctx.strokeStyle = "#34495e";
+                ctx.stroke();
+                // Text
+                ctx.fillStyle = "#34495e";
+                ctx.font = "14px Arial";
+                ctx.fillText("r = 4 cm", cx + 15, cy - 10);
+            }
+        },
+        {
+            title: "Level 4: Skate Ramp (Area)",
+            scenario: "An engineer is designing a triangular side-panel for a new skateboard ramp.",
+            question: "What is the area of a right-angled triangle with a base of 12m and a height of 6m? (in m²)",
+            answer: 36,
+            draw: (ctx) => {
+                ctx.beginPath();
+                ctx.moveTo(280, 240);
+                ctx.lineTo(500, 240);
+                ctx.lineTo(280, 100);
+                ctx.closePath();
+                ctx.fillStyle = "#9b59b6";
+                ctx.fill();
+                drawDimension(280, 260, 500, 260, "12 m");
+                drawDimension(250, 100, 250, 240, "6 m");
+            }
+        },
+        {
+            title: "Level 5: The Packing Box (Volume)",
+            scenario: "A courier service needs to find the volume of a standard shipping crate.",
+            question: "What is the volume of a rectangular prism with length = 5cm, width = 3cm, and height = 4cm? (in cm³)",
+            answer: 60,
+            draw: (ctx) => {
+                draw3DBox(320, 160, 120, 80, 70, "#3498db");
+            }
+        },
+        {
+            title: "Level 6: Storage Cube (Volume)",
+            scenario: "A toy company manufactures perfect cube containers for organizing building blocks.",
+            question: "What is the volume of a cube with side lengths of 5cm? (in cm³)",
+            answer: 125,
+            draw: (ctx) => {
+                draw3DBox(330, 150, 100, 100, 100, "#e74c3c");
+            }
+        },
+        {
+            title: "Level 7: The Pool Party (Volume)",
+            scenario: "The community center is filling up a newly built Olympic training pool.",
+            question: "Calculate the volume of a pool that is 10m long, 6m wide, and 2m deep. (in m³)",
+            answer: 120,
+            draw: (ctx) => {
+                draw3DBox(300, 170, 160, 90, 40, "#1abc9c");
+            }
+        },
+        {
+            title: "Level 8: The Soda Can (Volume)",
+            scenario: "A beverage company wants to verify the space inside their new slimline can design.",
+            question: "Find the volume of a cylinder with a radius of 3cm and a height of 10cm. (Use π = 3.14, round to 1 decimal place)",
+            answer: 282.6,
+            draw: (ctx) => {
+                drawCylinder(380, 120, 50, 120, "#95a5a6");
+            }
+        },
+        {
+            title: "Level 9: The Ice Cream Cone (Volume)",
+            scenario: "A dessert chef needs to compute how much liquid chocolate fits inside a waffle cone.",
+            question: "What is the volume of a cone with a radius of 3cm and a height of 7cm? (Use π = 3.14, round to 2 decimal places)",
+            answer: 65.94,
+            draw: (ctx) => {
+                drawCone(380, 130, 45, 130, "#f39c12");
+            }
+        },
+        {
+            title: "Level 10: Final Challenge! (Complex Area)",
+            scenario: "An architect is drafting an L-shaped living room floor plan.",
+            question: "Find the total area: Combine a 6m x 4m rectangle with an adjacent 3m x 3m square. (in m²)",
+            answer: 33,
+            draw: (ctx) => {
+                ctx.beginPath();
+                ctx.rect(260, 120, 160, 110); // 6x4
+                ctx.rect(420, 165, 80, 65);  // 3x3
+                ctx.fillStyle = "#34495e";
+                ctx.fill();
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "14px Arial";
+                ctx.fillText("6m x 4m", 310, 180);
+                ctx.fillText("3m x 3m", 435, 205);
+            }
+        }
+    ];
+
+    function initGame() {
+        currentLevel = 0;
+        score = 0;
+        gameActive = true;
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('submit-btn').style.display = 'inline-block';
+        document.getElementById('answer-input').style.display = 'inline-block';
+        renderLevel();
+    }
+
+    function renderLevel() {
+        if (currentLevel >= levels.length) {
+            endGame();
+            return;
+        }
+
+        // Update UI Text
+        document.getElementById('level-display').innerText = `Level: ${currentLevel + 1}/${levels.length}`;
+        document.getElementById('score-display').innerText = `Score: ${score}`;
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('answer-input').value = '';
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('submit-btn').style.display = 'inline-block';
+        
+        let lvl = levels[currentLevel];
+
+        // Clear Canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw Scenario background texts
+        ctx.fillStyle = "#2c3e50";
+        ctx.font = "bold 18px Arial";
+        ctx.fillText(lvl.title, 20, 35);
+        
+        ctx.fillStyle = "#555555";
+        ctx.font = "italic 14px Arial";
+        wrapText(ctx, lvl.scenario, 20, 60, 720, 20);
+
+        ctx.fillStyle = "#2980b9";
+        ctx.font = "bold 15px Arial";
+        wrapText(ctx, "Question: " + lvl.question, 20, 330, 720, 22);
+
+        // Fire custom drawing logic for the geometric shape
+        ctx.save();
+        lvl.draw(ctx);
+        ctx.restore();
+    }
+
+    function checkAnswer() {
+        if (!gameActive) return;
+
+        let input = parseFloat(document.getElementById('answer-input').value);
+        let feedback = document.getElementById('feedback');
+        let lvl = levels[currentLevel];
+
+        if (isNaN(input)) {
+            feedback.className = "error";
+            feedback.innerText = "Please enter a valid numerical answer!";
+            feedback.style.display = "block";
+            return;
+        }
+
+        // Allow slight variance for decimals/rounding quirks
+        if (Math.abs(input - lvl.answer) < 0.05) {
+            score += 10;
+            document.getElementById('score-display').innerText = `Score: ${score}`;
+            feedback.className = "success";
+            feedback.innerText = "🎉 Correct! Great job!";
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'inline-block';
+        } else {
+            feedback.className = "error";
+            feedback.innerText = "❌ Incorrect. Look closely at the numbers and try again!";
+        }
+        feedback.style.display = "block";
+    }
+
+    function nextLevel() {
+        currentLevel++;
+        renderLevel();
+    }
+
+    function endGame() {
+        gameActive = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = "#27ae60";
+        ctx.font = "bold 32px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("🏆 Math Quest Accomplished!", canvas.width / 2, 160);
+        
+        ctx.fillStyle = "#34495e";
+        ctx.font = "20px Arial";
+        ctx.fillText(`Final Score: ${score} / ${levels.length * 10} points`, canvas.width / 2, 210);
+        ctx.fillText("You successfully mastered the challenges of Area & Volume!", canvas.width / 2, 250);
+
+        document.getElementById('control-box').innerHTML = `<button onclick="location.reload()">Play Again</button>`;
+        document.getElementById('feedback').style.display = 'none';
+    }
+
+    // --- CANVAS DRAWING HELPER FUNCTIONS ---
+
+    function drawRect(x, y, w, h, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = "#2c3e50";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x, y, w, h);
+    }
+
+    function drawDimension(x1, y1, x2, y2, label) {
+        ctx.strokeStyle = "#34495e";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Arrowheads
+        ctx.fillStyle = "#34495e";
+        ctx.font = "13px Arial";
+        let mx = (x1 + x2) / 2;
+        let my = (y1 + y2) / 2;
+        
+        if (x1 === x2) { // Vertical layout
+            ctx.fillText(label, x1 - 35, my + 5);
+        } else { // Horizontal layout
+            ctx.fillText(label, mx - 10, y1 - 8);
+        }
+    }
+
+    function draw3DBox(x, y, w, h, depth, color) {
+        let d = depth * 0.4; // isometric perspective shift
+        
+        // Back side or fill simulation
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+        
+        // Top Face
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + d, y - d);
+        ctx.lineTo(x + w + d, y - d);
+        ctx.lineTo(x + w, y);
+        ctx.closePath();
+        ctx.fillStyle = color; 
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.2)"; // overlay highlight
+        ctx.fill();
+        ctx.strokeStyle = "#2c3e50";
+        ctx.stroke();
+
+        // Right Face
+        ctx.beginPath();
+        ctx.moveTo(x + w, y);
+        ctx.lineTo(x + w + d, y - d);
+        ctx.lineTo(x + w + d, y + h - d);
+        ctx.lineTo(x + w, y + h);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.fillStyle = "rgba(0,0,0,0.15)"; // shade overlay
+        ctx.fill();
+        ctx.strokeStyle = "#2c3e50";
+        ctx.stroke();
+
+        // Front Face stroke
+        ctx.strokeStyle = "#2c3e50";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+
+        // Labels mapping based on level parameters
+        ctx.fillStyle = "#2c3e50";
+        ctx.font = "12px Arial";
+        if(w === 100) { // Cube level
+            ctx.fillText("5 cm", x + w/2 - 10, y + h + 18);
+            ctx.fillText("5 cm", x + w + 20, y + h/2);
+            ctx.fillText("5 cm", x - 35, y + h/2);
+        } else if (h === 40) { // Pool level
+            ctx.fillText("10 m", x + w/2 - 10, y + h + 18);
+            ctx.fillText("6 m", x + w + 15, y + h/2 - 10);
+            ctx.fillText("2 m", x - 30, y + h/2);
+        } else { // Generic box
+            ctx.fillText("5 cm", x + w/2 - 10, y + h + 18);
+            ctx.fillText("3 cm", x + w + 15, y + h/2 - 10);
+            ctx.fillText("4 cm", x - 35, y + h/2);
+        }
+    }
+
+    function drawCylinder(x, y, r, h, color) {
+        // Bottom Ellipse
+        ctx.beginPath();
+        ctx.ellipse(x, y + h, r, r/3, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = "#2c3e50";
+        ctx.stroke();
+
+        // Body rectangle
+        ctx.fillRect(x - r, y, r * 2, h);
+        ctx.strokeRect(x - r, y, r * 2, h);
+
+        // Top Ellipse
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r/3, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = "#bdc3c7";
+        ctx.fill();
+        ctx.stroke();
+
+        // Re-draw sides lines to hide overlapping clean lines
+        ctx.beginPath();
+        ctx.moveTo(x - r, y); ctx.lineTo(x - r, y + h);
+        ctx.moveTo(x + r, y); ctx.lineTo(x + r, y + h);
+        ctx.strokeStyle = "#2c3e50";
+        ctx.stroke();
+
+        // Labels
+        ctx.fillStyle = "#34495e";
+        ctx.font = "13px Arial";
+        ctx.fillText("h = 10 cm", x + r + 15, y + h/2);
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y); ctx.lineTo(x + r, y);
+        ctx.strokeStyle = "#e74c3c";
+        ctx.stroke();
+        ctx.fillText("r = 3 cm", x + 5, y - 10);
+    }
+
+    function drawCone(x, y, r, h, color) {
+        // Base Oval
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r/3, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = "#f5b041";
+        ctx.fill();
+        ctx.stroke();
+
+        // Tip vector lines
+        ctx.beginPath();
+        ctx.moveTo(x - r, y);
+        ctx.lineTo(x, y + h);
+        ctx.lineTo(x + r, y);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = "#2c3e50";
+        ctx.stroke();
+
+        // Height Line
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + h);
+        ctx.strokeStyle = "#7f8c8d";
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Dimension markers
+        ctx.fillStyle = "#34495e";
+        ctx.font = "13px Arial";
+        ctx.fillText("h = 7 cm", x - 60, y + h/2);
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y); ctx.lineTo(x + r, y);
+        ctx.strokeStyle = "#2c3e50";
+        ctx.stroke();
+        ctx.fillText("r = 3 cm", x + 5, y - 8);
+    }
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+        let words = text.split(' ');
+        let line = '';
+        for(let n = 0; n < words.length; n++) {
+            let testLine = line + words[n] + ' ';
+            let metrics = context.measureText(testLine);
+            let testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                context.fillText(line, x, y);
+                line = words[n] + ' ';
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        context.fillText(line, x, y);
+    }
+
+    // Run the script instantly
+    initGame();
+</script>
+
+</body>
+</html>
